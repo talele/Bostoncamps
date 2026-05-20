@@ -5,9 +5,9 @@
   "use strict";
 
   // ── Constants ──
-  const PROFILE_KEY = "norfolkCampFinderProfile";
-  const SCHEDULE_KEY = "norfolkCampFinderSchedule";
-  const HOWTO_SEEN_KEY = "norfolkCampFinderHowtoSeen";
+  const PROFILE_KEY = "greaterBostonCampFinderProfile";
+  const SCHEDULE_KEY = "greaterBostonCampFinderSchedule";
+  const HOWTO_SEEN_KEY = "greaterBostonCampFinderHowtoSeen";
   const KID_COLORS = ["#2e86de", "#e84393", "#00b894", "#f39c12"];
   const ALL_KIDS_COLOR = "#3E6B48";
 
@@ -89,6 +89,27 @@
         if (!k.interests) k.interests = [];
       });
     }
+
+    // Normalize legacy neighborhood values (labels/case variants) to canonical IDs
+    const neighborhoodEntries = (NEIGHBORHOOD_AREAS || []).flatMap(area => area.neighborhoods || []);
+    const validNeighborhoodIds = new Set(neighborhoodEntries.map(n => n.id));
+    const labelToId = {};
+    neighborhoodEntries.forEach(n => {
+      labelToId[n.label.toLowerCase()] = n.id;
+      labelToId[n.id.toLowerCase()] = n.id;
+    });
+
+    const rawNeighborhoods = Array.isArray(profile.neighborhoods) ? profile.neighborhoods : [];
+    const normalizedNeighborhoods = rawNeighborhoods
+      .map(n => {
+        if (typeof n !== "string") return null;
+        const key = n.trim().toLowerCase();
+        return labelToId[key] || null;
+      })
+      .filter((id, idx, arr) => id && validNeighborhoodIds.has(id) && arr.indexOf(id) === idx);
+
+    profile.neighborhoods = normalizedNeighborhoods;
+
     return profile;
   }
 
@@ -508,7 +529,7 @@
     // Update header subtitle
     const subtitle = document.getElementById("headerSubtitle");
     const kidNames = profile.kids.map(k => k.name).join(" & ");
-    subtitle.textContent = kidNames ? `Summer camps for ${kidNames}` : "Summer Camps for Norfolk County, MA";
+    subtitle.textContent = kidNames ? `Summer camps for ${kidNames}` : "Summer Camps for Greater Boston";
 
     // School note
     const districtInfo = SCHOOL_DISTRICTS[profile.district];
